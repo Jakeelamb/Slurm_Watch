@@ -29,3 +29,7 @@ dev_dependencies:
 # Flutter configuration
 flutter:
   uses-material-design: true
+  # Comment out assets until you have the actual files
+  # assets:
+  #   - assets/images/pattern_light.png
+  #   - assets/images/pattern_dark.png

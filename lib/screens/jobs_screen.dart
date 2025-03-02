@@ -7,6 +7,7 @@ import '../widgets/job_card.dart';
 import '../models/job.dart';
 import 'settings_screen.dart';
 import '../utils/macos_theme.dart';
+import '../providers/appearance_provider.dart';
 
 class JobsScreen extends StatefulWidget {
   static const routeName = '/jobs';
@@ -17,8 +18,48 @@ class JobsScreen extends StatefulWidget {
   State<JobsScreen> createState() => _JobsScreenState();
 }
 
-class _JobsScreenState extends State<JobsScreen> {
+class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateMixin {
   String _selectedFilter = 'All';
+  bool _sidebarExpanded = true;
+  late AnimationController _sidebarController;
+  late Animation<double> _sidebarAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _sidebarController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    
+    _sidebarAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _sidebarController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _sidebarController.reverse();
+  }
+  
+  @override
+  void dispose() {
+    _sidebarController.dispose();
+    super.dispose();
+  }
+  
+  void _toggleSidebar() {
+    setState(() {
+      _sidebarExpanded = !_sidebarExpanded;
+      if (_sidebarExpanded) {
+        _sidebarController.reverse();
+      } else {
+        _sidebarController.forward();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +68,6 @@ class _JobsScreenState extends State<JobsScreen> {
     final jobs = jobProvider.jobs;
     final isDesktop = MediaQuery.of(context).size.width > 800;
     
-    // Filter jobs based on selection
     final filteredJobs = _filterJobs(jobs, _selectedFilter);
     
     return FrostedBackground(
@@ -37,24 +77,56 @@ class _JobsScreenState extends State<JobsScreen> {
         drawer: isDesktop ? null : _buildDrawer(context, jobProvider, authProvider),
         body: Row(
           children: [
-            // Desktop sidebar
-            if (isDesktop) _buildSidebar(context, jobProvider, authProvider),
+            if (isDesktop) 
+              AnimatedBuilder(
+                animation: _sidebarAnimation,
+                builder: (context, child) {
+                  return Row(
+                    children: [
+                      SizeTransition(
+                        sizeFactor: _sidebarAnimation,
+                        axis: Axis.horizontal,
+                        axisAlignment: -1,
+                        child: _buildSidebar(context, jobProvider, authProvider),
+                      ),
+                      
+                      Container(
+                        width: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: _toggleSidebar,
+                          child: Center(
+                            child: Icon(
+                              _sidebarExpanded 
+                                ? Icons.chevron_left 
+                                : Icons.chevron_right,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             
-            // Main content area
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Desktop header
                   if (isDesktop) _buildDesktopHeader(authProvider),
                   
-                  // Status summary cards
                   _buildStatusSummary(jobProvider),
                   
-                  // Filter chips
                   _buildFilterChips(),
                   
-                  // Jobs list
                   Expanded(
                     child: jobProvider.isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -166,9 +238,9 @@ class _JobsScreenState extends State<JobsScreen> {
   
   Widget _buildSidebar(BuildContext context, JobProvider jobProvider, AuthProvider authProvider) {
     return Container(
-      width: 220, // Slightly wider for better proportions
+      width: 220,
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7), // Semi-transparent sidebar
+        color: Colors.black.withOpacity(0.7),
         borderRadius: const BorderRadius.only(
           topRight: Radius.circular(12),
           bottomRight: Radius.circular(12),
@@ -183,7 +255,6 @@ class _JobsScreenState extends State<JobsScreen> {
       ),
       child: Column(
         children: [
-          // Header with user info
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             decoration: BoxDecoration(
@@ -254,7 +325,6 @@ class _JobsScreenState extends State<JobsScreen> {
             ),
           ),
           
-          // Actions list
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -308,7 +378,6 @@ class _JobsScreenState extends State<JobsScreen> {
             ),
           ),
           
-          // Logout button at bottom
           Container(
             padding: const EdgeInsets.all(20),
             width: double.infinity,

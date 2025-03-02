@@ -8,6 +8,7 @@ import 'screens/login_screen.dart';
 import 'screens/jobs_screen.dart';
 import 'screens/settings_screen.dart';
 import 'utils/macos_theme.dart';
+import 'providers/appearance_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,9 +30,10 @@ class MyApp extends StatelessWidget {
             return provider;
           },
         ),
+        ChangeNotifierProvider(create: (_) => AppearanceProvider()),
       ],
-      child: Consumer<AuthProvider>(
-        builder: (ctx, auth, _) {
+      child: Consumer2<AuthProvider, AppearanceProvider>(
+        builder: (ctx, auth, appearance, _) {
           // Comment out or remove these lines to use real login
           // if (!auth.isAuth && kDebugMode) {
           //   auth.setTestSession("test_session_123", "test_user", "localhost");
@@ -41,7 +43,7 @@ class MyApp extends StatelessWidget {
             title: 'SWATCH - Slurm Job Monitor',
             theme: MacOSTheme.lightTheme,
             darkTheme: MacOSTheme.darkTheme,
-            themeMode: ThemeMode.system,
+            themeMode: appearance.themeMode,
             home: auth.isAuth 
               ? const JobsScreen() 
               : FutureBuilder(

@@ -9,8 +9,8 @@ class FrostedBackground extends StatelessWidget {
   const FrostedBackground({
     Key? key,
     required this.child,
-    this.sigma = 12.0,
-    this.opacity = 0.6,
+    this.sigma = 10.0,
+    this.opacity = 0.75, // Lighter for a cleaner feel
   }) : super(key: key);
 
   @override
@@ -19,7 +19,7 @@ class FrostedBackground extends StatelessWidget {
     
     return Stack(
       children: [
-        // Background with subtle gradient
+        // Simple gradient background
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -27,18 +27,18 @@ class FrostedBackground extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: isDarkMode
                   ? [
-                      const Color(0xFF333333),
-                      const Color(0xFF555555),
+                      const Color(0xFF222222), 
+                      const Color(0xFF383838),
                     ]
                   : [
                       const Color(0xFFF5F5F5),
-                      const Color(0xFFE0E0E0),
+                      const Color(0xFFE5E5E5),
                     ],
             ),
           ),
         ),
         
-        // More transparent frosted glass effect
+        // Clean, subtle blur
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
           child: Container(

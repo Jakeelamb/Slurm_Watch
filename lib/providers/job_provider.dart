@@ -9,7 +9,7 @@ class JobProvider with ChangeNotifier {
   String? _sessionId;
   DateTime? _lastUpdated;
   bool _isLoading = false;
-  bool _autoRefresh = true;
+  bool _autoRefresh = false;
   int _refreshInterval = 30; // seconds
   Timer? _refreshTimer;
   bool _testMode = false;
@@ -121,24 +121,20 @@ class JobProvider with ChangeNotifier {
   
   void toggleAutoRefresh(bool value) {
     _autoRefresh = value;
-    
     if (_autoRefresh) {
-      _startAutoRefresh();
+      _startRefreshTimer();
     } else {
-      _stopAutoRefresh();
+      _stopRefreshTimer();
     }
-    
     notifyListeners();
   }
   
   void setRefreshInterval(int seconds) {
     _refreshInterval = seconds;
-    
     if (_autoRefresh) {
-      _stopAutoRefresh();
-      _startAutoRefresh();
+      _stopRefreshTimer();
+      _startRefreshTimer();
     }
-    
     notifyListeners();
   }
   
@@ -161,9 +157,22 @@ class JobProvider with ChangeNotifier {
     _refreshTimer = null;
   }
   
+  void _startRefreshTimer() {
+    _refreshTimer = Timer.periodic(
+      Duration(seconds: _refreshInterval),
+      (_) => fetchJobs(),
+    );
+  }
+  
+  void _stopRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+  
   @override
   void dispose() {
     _stopAutoRefresh();
+    _stopRefreshTimer();
     super.dispose();
   }
 } 
