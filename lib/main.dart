@@ -7,7 +7,7 @@ import 'providers/job_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/jobs_screen.dart';
 import 'screens/settings_screen.dart';
-import 'utils/theme.dart';
+import 'utils/macos_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -39,8 +39,8 @@ class MyApp extends StatelessWidget {
           
           return MaterialApp(
             title: 'SWATCH - Slurm Job Monitor',
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            theme: MacOSTheme.lightTheme,
+            darkTheme: MacOSTheme.darkTheme,
             themeMode: ThemeMode.system,
             home: auth.isAuth 
               ? const JobsScreen() 
@@ -71,12 +71,23 @@ class SplashScreen extends StatelessWidget {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            // Add your logo here
-            Text('SWATCH',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 20),
-            CircularProgressIndicator(),
+          children: [
+            Icon(
+              Icons.analytics,
+              size: 48,
+              color: Theme.of(context).primaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'SWATCH',
+              style: TextStyle(
+                fontSize: 24, 
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(),
           ],
         ),
       ),

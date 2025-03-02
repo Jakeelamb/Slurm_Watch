@@ -13,10 +13,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  provider: ^6.0.3
+  google_fonts: ^4.0.4  # Downgraded to be compatible with http ^0.13.5
+  provider: ^6.0.5
   http: ^0.13.5
   shared_preferences: ^2.0.15  # Use this for all storage
   cupertino_icons: ^1.0.5
+  flutter_acrylic: ^1.1.3  # For frosted glass effects on desktop
+  clipboard: ^0.1.3  # For copy functionality
 
 dev_dependencies:
   flutter_test:
