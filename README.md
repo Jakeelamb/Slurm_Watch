@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # swatch
 
 A new Flutter project.
@@ -14,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# Slurm_Watch
+>>>>>>> f0f562521c80d5a7a4681f15e33c556fe0b8186e
