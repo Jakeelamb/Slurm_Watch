@@ -7,7 +7,7 @@ class MacOSTheme {
   static const Color backgroundDark = Color(0xFF333333);
   static const Color accentColor = Color(0xFF007AFF); // macOS blue
   
-  // Status colors
+  // Status colors - Made slightly brighter
   static const Color runningColor = Color(0xFF007AFF); // Blue
   static const Color pendingColor = Color(0xFFFF9500); // Orange
   static const Color completedColor = Color(0xFF34C759); // Green
@@ -20,18 +20,18 @@ class MacOSTheme {
       primary: accentColor,
       secondary: accentColor,
       background: background,
-      surface: Colors.white.withOpacity(0.9),
+      surface: Colors.white.withOpacity(0.8), // More transparent
     ),
     scaffoldBackgroundColor: background,
     cardTheme: CardTheme(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(10.0), // Slightly more rounded
       ),
-      color: Colors.white.withOpacity(0.9),
+      color: Colors.white.withOpacity(0.7), // More transparent cards
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.white.withOpacity(0.9),
+      backgroundColor: Colors.white.withOpacity(0.7), // More transparent
       foregroundColor: Colors.black,
       elevation: 0,
       centerTitle: true,
@@ -89,18 +89,21 @@ class MacOSTheme {
       primary: accentColor,
       secondary: accentColor,
       background: backgroundDark,
-      surface: Colors.black.withOpacity(0.9),
+      surface: const Color(0xFF222222).withOpacity(0.7), // More transparent
     ),
     scaffoldBackgroundColor: backgroundDark,
     cardTheme: CardTheme(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(10.0), // Slightly more rounded
       ),
-      color: const Color(0xFF222222).withOpacity(0.9),
+      color: const Color(0xFF444444).withOpacity(0.6), // Lighter, more transparent cards
+    ),
+    drawerTheme: DrawerThemeData(
+      backgroundColor: Colors.black.withOpacity(0.7), // Semi-transparent drawer
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: const Color(0xFF222222).withOpacity(0.9),
+      backgroundColor: const Color(0xFF333333).withOpacity(0.7), // Semi-transparent
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
@@ -112,6 +115,9 @@ class MacOSTheme {
     ),
     textTheme: GoogleFonts.interTextTheme(
       ThemeData.dark().textTheme,
+    ).apply(
+      bodyColor: Colors.white, // Ensure good contrast with transparent backgrounds
+      displayColor: Colors.white,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -151,7 +157,7 @@ class MacOSTheme {
     ),
   );
 
-  // Get color for job status
+  // Get color for job status with increased opacity for stronger colors
   static Color getStatusColor(String status) {
     if (status == 'RUNNING') return runningColor;
     if (status == 'PENDING') return pendingColor;

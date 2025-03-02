@@ -9,27 +9,36 @@ class FrostedBackground extends StatelessWidget {
   const FrostedBackground({
     Key? key,
     required this.child,
-    this.sigma = 10.0,
-    this.opacity = 0.8,
+    this.sigma = 12.0,
+    this.opacity = 0.6,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Stack(
       children: [
-        // Background image or color could be added here
+        // Background with subtle gradient
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).colorScheme.background,
-                Theme.of(context).colorScheme.background.withOpacity(0.8),
-              ],
+              colors: isDarkMode
+                  ? [
+                      const Color(0xFF333333),
+                      const Color(0xFF555555),
+                    ]
+                  : [
+                      const Color(0xFFF5F5F5),
+                      const Color(0xFFE0E0E0),
+                    ],
             ),
           ),
         ),
+        
+        // More transparent frosted glass effect
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
           child: Container(

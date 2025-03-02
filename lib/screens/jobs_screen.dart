@@ -166,131 +166,258 @@ class _JobsScreenState extends State<JobsScreen> {
   
   Widget _buildSidebar(BuildContext context, JobProvider jobProvider, AuthProvider authProvider) {
     return Container(
-      width: 250,
+      width: 220, // Slightly wider for better proportions
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Colors.black.withOpacity(0.7), // Semi-transparent sidebar
         borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(10),
-          bottomRight: Radius.circular(10),
+          topRight: Radius.circular(12),
+          bottomRight: Radius.circular(12),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(2, 0),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Logo and title
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
+          // Header with user info
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.analytics, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 12),
                 const Text(
                   'SWATCH',
                   style: TextStyle(
-                    fontSize: 20,
+                    color: Colors.white,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.person,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            authProvider.username ?? 'User',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            authProvider.hostname ?? 'localhost',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           
-          const Divider(),
-          
-          // User info
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
+          // Actions list
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               children: [
-                CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: Text(
-                    authProvider.username?.substring(0, 1).toUpperCase() ?? 'U',
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                _buildSidebarItem(
+                  context,
+                  icon: Icons.refresh_rounded,
+                  label: 'Refresh Jobs',
+                  onTap: () => jobProvider.fetchJobs(),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                
+                const SizedBox(height: 8),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
                     children: [
-                      Text(
-                        authProvider.username ?? '',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      const Icon(
+                        Icons.autorenew_rounded,
+                        color: Colors.white70,
+                        size: 20,
                       ),
-                      Text(
-                        authProvider.hostname ?? '',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Auto Refresh',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Switch(
+                        value: jobProvider.autoRefresh,
+                        onChanged: (value) => jobProvider.toggleAutoRefresh(value),
+                        activeColor: Theme.of(context).primaryColor,
                       ),
                     ],
                   ),
                 ),
+                
+                const SizedBox(height: 8),
+                
+                _buildSidebarItem(
+                  context,
+                  icon: Icons.settings_rounded,
+                  label: 'Settings',
+                  onTap: () => Navigator.pushNamed(context, SettingsScreen.routeName),
+                ),
               ],
             ),
           ),
           
-          const Divider(),
-          
-          // Actions
-          ListTile(
-            leading: const Icon(Icons.refresh),
-            title: const Text('Refresh'),
-            onTap: () => jobProvider.fetchJobs(),
+          // Logout button at bottom
+          Container(
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => authProvider.logout(),
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Logout'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.red.shade800.withOpacity(0.8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
           ),
-          SwitchListTile(
-            title: const Text('Auto Refresh'),
-            secondary: const Icon(Icons.timer),
-            value: jobProvider.autoRefresh,
-            onChanged: (value) => jobProvider.toggleAutoRefresh(value),
-          ),
-          
-          const Spacer(),
-          
-          const Divider(),
-          
-          // Bottom actions
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () => Navigator.pushNamed(context, SettingsScreen.routeName),
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
-            onTap: () => authProvider.logout(),
-          ),
-          
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
   
+  Widget _buildSidebarItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: Colors.white70,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
   Widget _buildDesktopHeader(AuthProvider authProvider) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Hello, ${authProvider.username ?? "User"}',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Job Dashboard',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Connected to ${authProvider.hostname}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white70 
+                      : Colors.black54,
+                ),
+              ),
+            ],
           ),
-          const Spacer(),
-          Text(
-            'Last Updated: ${_formatLastUpdated(Provider.of<JobProvider>(context).lastUpdated)}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Last Updated: ${_formatLastUpdated(Provider.of<JobProvider>(context).lastUpdated)}',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: 'Refresh Jobs',
+                onPressed: () => Provider.of<JobProvider>(context, listen: false).fetchJobs(),
+              ),
+            ],
           ),
         ],
       ),
@@ -298,34 +425,21 @@ class _JobsScreenState extends State<JobsScreen> {
   }
   
   Widget _buildStatusSummary(JobProvider jobProvider) {
+    final runningJobs = jobProvider.jobs.where((job) => job.status == 'RUNNING').length;
+    final pendingJobs = jobProvider.jobs.where((job) => job.status == 'PENDING').length;
+    final completedJobs = jobProvider.jobs.where((job) => 
+      job.status == 'COMPLETED' || job.status == 'COMPLETING').length;
+    final failedJobs = jobProvider.jobs.where((job) => 
+      ['FAILED', 'TIMEOUT', 'CANCELLED'].contains(job.status)).length;
+    
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          _buildStatusCard(
-            'Running',
-            jobProvider.runningCount.toString(),
-            Colors.blue,
-            Icons.play_arrow,
-          ),
-          _buildStatusCard(
-            'Pending',
-            jobProvider.pendingCount.toString(),
-            Colors.orange,
-            Icons.hourglass_empty,
-          ),
-          _buildStatusCard(
-            'Completed',
-            jobProvider.completedCount.toString(),
-            Colors.green,
-            Icons.check_circle,
-          ),
-          _buildStatusCard(
-            'Failed',
-            jobProvider.failedCount.toString(),
-            Colors.red,
-            Icons.error,
-          ),
+          _buildStatusCard('Running', runningJobs.toString(), MacOSTheme.runningColor, Icons.play_circle_outline),
+          _buildStatusCard('Pending', pendingJobs.toString(), MacOSTheme.pendingColor, Icons.pending_outlined),
+          _buildStatusCard('Completed', completedJobs.toString(), MacOSTheme.completedColor, Icons.check_circle_outline),
+          _buildStatusCard('Failed', failedJobs.toString(), MacOSTheme.failedColor, Icons.error_outline),
         ],
       ),
     );
