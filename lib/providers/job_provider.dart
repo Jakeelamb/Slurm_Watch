@@ -56,6 +56,9 @@ class JobProvider with ChangeNotifier {
     
     if (timeRange != null) {
       _currentTimeRange = timeRange;
+      print("IMPORTANT: Changed time range to: $_currentTimeRange");
+      _jobs = []; // Clear jobs to force UI update
+      notifyListeners(); // Notify listeners of the change
     }
     
     _isLoading = true;
@@ -67,67 +70,23 @@ class JobProvider with ChangeNotifier {
       
       final response = await http.get(
         Uri.parse(url),
-      ).timeout(const Duration(seconds: 5));
-      
-      print('Jobs response status: ${response.statusCode}');
+      );
       
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         final List<dynamic> jobsData = responseData['jobs'];
         
         _jobs = jobsData.map((jobData) => Job.fromJson(jobData)).toList();
+        print('IMPORTANT: Received ${_jobs.length} jobs for time range: $_currentTimeRange');
         
         if (responseData.containsKey('last_updated')) {
           _lastUpdated = DateTime.parse(responseData['last_updated']);
         } else {
           _lastUpdated = DateTime.now();
         }
-      } else {
-        print('Error: ${response.statusCode} - ${response.body}');
       }
     } catch (error) {
-      print('Connection error: $error');
-      if (_testMode) {
-        _jobs = [
-          Job(
-            jobId: '1001',
-            name: 'test_job_running',
-            status: 'RUNNING',
-            time: '1:30:00',
-            nodes: '2',
-            cpus: '8',
-            memory: '16G',
-          ),
-          Job(
-            jobId: '1002',
-            name: 'test_job_pending',
-            status: 'PENDING',
-            time: '2:00:00',
-            nodes: '1',
-            cpus: '4',
-            memory: '8G',
-          ),
-          Job(
-            jobId: '1000',
-            name: 'test_job_completed',
-            status: 'COMPLETED',
-            time: '0:45:00',
-            nodes: '1',
-            cpus: '2',
-            memory: '4G',
-          ),
-          Job(
-            jobId: '1003',
-            name: 'test_job_failed',
-            status: 'FAILED',
-            time: '0:30:00',
-            nodes: '1',
-            cpus: '1',
-            memory: '2G',
-          ),
-        ];
-        _lastUpdated = DateTime.now();
-      }
+      print('Error: $error');
     } finally {
       _isLoading = false;
       notifyListeners();

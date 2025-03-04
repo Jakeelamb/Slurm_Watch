@@ -695,10 +695,52 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
             ],
             onChanged: (value) {
               if (value != null) {
-                jobProvider.fetchJobs(timeRange: value);
+                print("User selected time range: $value");
+                Provider.of<JobProvider>(context, listen: false).fetchJobs(timeRange: value);
               }
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTimeRange(String timeRange) {
+    switch (timeRange) {
+      case "1h":
+        return "Last 1 Hour";
+      case "6h":
+        return "Last 6 Hours";
+      case "12h":
+        return "Last 12 Hours";
+      case "24h":
+        return "Last 24 Hours";
+      case "156h":
+        return "Last 6.5 Days";
+      default:
+        return "Last 24 Hours";
+    }
+  }
+
+  Widget _buildLastUpdatedInfo(JobProvider jobProvider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Text(
+            'Showing jobs from: ',
+            style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[600]),
+          ),
+          Text(
+            _formatTimeRange(jobProvider.currentTimeRange),
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]),
+          ),
+          Spacer(),
+          if (jobProvider.lastUpdated != null)
+            Text(
+              'Last updated: ${jobProvider.lastUpdated!.toLocal().toString().substring(0, 19)}',
+              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[600]),
+            ),
         ],
       ),
     );

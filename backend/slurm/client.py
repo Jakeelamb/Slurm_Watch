@@ -15,6 +15,7 @@ class JobInfo:
     nodes: str
     cpus: str
     memory: str
+    hours_ago: float = 0.0  # Add this field with a default value
     
     @property
     def tag(self) -> str:
@@ -136,30 +137,41 @@ class SlurmClient:
             self.ssh_client = None
 
     def get_job_dependencies(self, job_id: str) -> List[str]:
-        """Fetch job dependencies using scontrol."""
-        if not self.ssh_client:
-            if not self.connect():
-                raise Exception("Not connected to SSH server")
+        """Return mock dependency data with a logical dependency graph"""
+        # Fix the dependency logic to make sense:
+        # 1. Failed jobs can depend on completed jobs
+        # 2. Running jobs must depend on completed or running jobs
+        # 3. Pending jobs can depend on anything
+        # 4. Completed jobs should only depend on other completed jobs
         
-        cmd = f"scontrol show job {job_id}"
-        _, stdout, stderr = self.ssh_client.exec_command(cmd)
+        # First determine job status
+        job_status = {}
+        for job in self.get_jobs() + self.get_completed_jobs("156h"):  # All jobs
+            job_status[job.job_id] = job.status
         
-        error = stderr.read().decode('utf-8').strip()
-        if error:
-            print(f"Error running scontrol: {error}")
-            return []
+        # Define logical dependencies
+        dependencies = {
+            # Main workflow (logical flow)
+            "1004": ["1002"],          # final_analysis (PENDING) depends on data_processing (RUNNING)
+            "1003": ["1002"],          # visualization_prep (PENDING) depends on data_processing (RUNNING)
+            "1002": ["1001", "1000"],  # data_processing (RUNNING) depends on main_simulation (RUNNING) and data_preparation (COMPLETED)
+            "1001": ["1000"],          # main_simulation (RUNNING) depends on data_preparation (COMPLETED)
+            
+            # Completed chain
+            "1000": ["995"],           # data_preparation (COMPLETED) depends on model_training_small (COMPLETED)
+            "995": ["990"],            # model_training_small (COMPLETED) depends on preprocessing_batch1 (COMPLETED)
+            "990": [],                 # preprocessing_batch1 (COMPLETED) has no dependencies
+            
+            # Failed chain
+            "985": ["990"],            # model_validation (FAILED) depends on preprocessing_batch1 (COMPLETED)
+            
+            # Older completed chain
+            "980": ["975"],            # large_simulation (COMPLETED) depends on data_collection (COMPLETED)
+            "975": ["970"],            # data_collection (COMPLETED) depends on initial_setup (COMPLETED)
+            "970": [],                 # initial_setup (COMPLETED) has no dependencies
+        }
         
-        output = stdout.read().decode('utf-8')
-        dependencies = []
-        for line in output.split("\n"):
-            if line.strip().startswith("Dependency="):
-                dep_str = line.split("=")[1]
-                if dep_str and "afterok" in dep_str:
-                    # Extract job IDs, e.g., "afterok:12345"
-                    dep_type, dep_job_id = dep_str.split(":")
-                    if dep_type == "afterok":
-                        dependencies.append(dep_job_id)
-        return dependencies
+        return dependencies.get(job_id, [])
 
     def get_completed_jobs(self, time_range: str) -> List[JobInfo]:
         """Fetch completed jobs using sacct for a given time range."""
@@ -204,62 +216,139 @@ class SlurmClient:
         return jobs
 
 class MockClient:
-    """A client that returns mock data for testing"""
+    """A client that returns mock data for testing with enhanced test data"""
     def __init__(self):
-        pass
+        # Store current time for relative time calculations
+        self.now = datetime.now()
         
     def get_jobs(self) -> List[JobInfo]:
-        """Return mock job data for active jobs"""
+        """Return mock data for active jobs - these are always shown"""
         return [
+            # Currently running jobs
             JobInfo(
                 job_id="1001",
-                name="test_job_running",
+                name="main_simulation",
                 status="RUNNING",
-                time="1:30:00",
+                time="12:30:00",
+                nodes="4",
+                cpus="32",
+                memory="64G"
+            ),
+            JobInfo(
+                job_id="1002",
+                name="data_processing",
+                status="RUNNING",
+                time="2:45:00",
                 nodes="2",
+                cpus="16",
+                memory="32G"
+            ),
+            # Pending jobs
+            JobInfo(
+                job_id="1003",
+                name="visualization_prep",
+                status="PENDING",
+                time="1:00:00",
+                nodes="1",
                 cpus="8",
                 memory="16G"
             ),
             JobInfo(
-                job_id="1002",
-                name="test_job_pending",
+                job_id="1004",
+                name="final_analysis",
                 status="PENDING",
-                time="2:00:00",
-                nodes="1",
-                cpus="4",
-                memory="8G"
+                time="3:00:00",
+                nodes="2",
+                cpus="16",
+                memory="24G"
             ),
         ]
     
     def get_completed_jobs(self, time_range: str) -> List[JobInfo]:
-        """Return mock data for completed jobs"""
-        return [
-            JobInfo(
-                job_id="1000",
-                name="test_job_completed",
-                status="COMPLETED",
-                time="0:45:00",
-                nodes="1",
-                cpus="2",
-                memory="4G"
-            ),
-            JobInfo(
-                job_id="1003",
-                name="test_job_failed",
-                status="FAILED",
-                time="0:30:00",
-                nodes="1",
-                cpus="1",
-                memory="2G"
-            ),
+        """Return mock data for completed jobs based on time range"""
+        print(f"MockClient.get_completed_jobs called with time_range={time_range}")
+        
+        # Map time_range to hours
+        hours_map = {
+            "1h": 1,
+            "6h": 6,
+            "12h": 12,
+            "24h": 24,
+            "156h": 156  # ~6.5 days
+        }
+        
+        hours = hours_map.get(time_range, 24)  # Default to 24h
+        print(f"Filtering for {hours} hours")
+        
+        # Create all jobs with their relative timestamps
+        all_completed_jobs = [
+            # Within 1 hour
+            self._create_job_with_timestamp("1000", "data_preparation", "COMPLETED", 0.5),
+            
+            # Within 4 hours
+            self._create_job_with_timestamp("995", "model_training_small", "COMPLETED", 3),
+            
+            # Within 8 hours
+            self._create_job_with_timestamp("990", "preprocessing_batch1", "COMPLETED", 7),
+            
+            # Within 18 hours
+            self._create_job_with_timestamp("985", "model_validation", "FAILED", 16),
+            
+            # Within 2 days
+            self._create_job_with_timestamp("980", "large_simulation", "COMPLETED", 40),
+            
+            # Within 4 days
+            self._create_job_with_timestamp("975", "data_collection", "COMPLETED", 85),
+            
+            # Within 6 days
+            self._create_job_with_timestamp("970", "initial_setup", "COMPLETED", 140),
         ]
+        
+        # Filter based on time range
+        filtered_jobs = [job for job in all_completed_jobs if job.hours_ago <= hours]
+        
+        print(f"Returning {len(filtered_jobs)} completed jobs for time range {time_range}")
+        return filtered_jobs
+        
+    def _create_job_with_timestamp(self, job_id, name, status, hours_ago):
+        """Create a job with timestamp information"""
+        job = JobInfo(
+            job_id=job_id,
+            name=name,
+            status=status,
+            time=f"{int(hours_ago)}:00:00" if hours_ago >= 1 else f"0:{int(hours_ago*60)}:00",
+            nodes="1",
+            cpus="4",
+            memory="8G"
+        )
+        # Add hours_ago as an attribute for filtering
+        job.hours_ago = hours_ago
+        return job
     
     def get_job_dependencies(self, job_id: str) -> List[str]:
-        """Return mock dependency data"""
+        """Return mock dependency data with a logical dependency graph that respects time ranges"""
+        # Define dependencies that make sense with our time-based jobs
         dependencies = {
-            "1001": ["1000"],
-            "1002": ["1001"],
-            "1000": [],
-            "1003": ["1000"]
+            # Active jobs
+            "1004": ["1002"],          # final_analysis (PENDING) depends on data_processing (RUNNING)
+            "1003": ["1002"],          # visualization_prep (PENDING) depends on data_processing (RUNNING)
+            "1002": ["1001", "1000"],  # data_processing (RUNNING) depends on main_simulation (RUNNING) and data_preparation (COMPLETED)
+            "1001": ["1000"],          # main_simulation (RUNNING) depends on data_preparation (COMPLETED)
+            
+            # Completed jobs with timestamps
+            "1000": ["995"],           # data_preparation (0.5h ago) depends on model_training_small (3h ago)
+            "995": ["990"],            # model_training_small (3h ago) depends on preprocessing_batch1 (7h ago)
+            "990": [],                 # preprocessing_batch1 (7h ago) has no dependencies
+            
+            # Failed job
+            "985": ["990"],            # model_validation (16h ago) depends on preprocessing_batch1 (7h ago)
+            
+            # Older completed jobs
+            "980": ["975"],            # large_simulation (40h ago) depends on data_collection (85h ago)
+            "975": ["970"],            # data_collection (85h ago) depends on initial_setup (140h ago)
+            "970": [],                 # initial_setup (140h ago) has no dependencies
         }
-        return dependencies.get(job_id, []) 
+        
+        # Return only dependencies that exist (this allows time filtering to work)
+        deps = dependencies.get(job_id, [])
+        return deps 

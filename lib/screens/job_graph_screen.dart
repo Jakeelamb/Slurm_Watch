@@ -143,20 +143,35 @@ class _JobGraphScreenState extends State<JobGraphScreen> {
     graph.nodes.clear();
     graph.edges.clear();
     
-    // First, add all nodes
+    // First pass: add all nodes
+    Map<String, Node> nodeMap = {};
     data.forEach((jobId, nodeData) {
-      graph.addNode(Node.Id(jobId));
+      final node = Node.Id(jobId);
+      graph.addNode(node);
+      nodeMap[jobId] = node;
     });
     
-    // Then add edges
+    // Second pass: add all edges
     data.forEach((jobId, nodeData) {
       final List<dynamic> dependencies = nodeData['dependencies'];
-      for (var depId in dependencies) {
-        if (data.containsKey(depId)) {
-          graph.addEdge(Node.Id(depId), Node.Id(jobId));
+      final targetNode = nodeMap[jobId];
+      
+      if (targetNode != null) {
+        for (var depId in dependencies) {
+          final sourceNode = nodeMap[depId.toString()];
+          if (sourceNode != null) {
+            graph.addEdge(sourceNode, targetNode);
+          }
         }
       }
     });
+    
+    // Reset builder with better settings
+    builder = BuchheimWalkerConfiguration()
+      ..siblingSeparation = 200
+      ..levelSeparation = 250
+      ..subtreeSeparation = 200
+      ..orientation = BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM;
   }
 
   Color _getColorForStatus(String status) {
@@ -181,79 +196,109 @@ class _JobGraphScreenState extends State<JobGraphScreen> {
               ? Center(child: Text(_error!, style: TextStyle(color: Colors.red)))
               : graph.nodeCount() == 0
                   ? Center(child: Text('No job dependencies found'))
-                  : InteractiveViewer(
-                      constrained: false,
-                      boundaryMargin: EdgeInsets.all(100),
-                      minScale: 0.1,
-                      maxScale: 2.0,
-                      child: GraphView(
-                        graph: graph,
-                        algorithm: BuchheimWalkerAlgorithm(builder, TreeEdgeRenderer(builder)),
-                        paint: Paint()
-                          ..color = Colors.black
-                          ..strokeWidth = 2
-                          ..style = PaintingStyle.stroke,
-                        builder: (Node node) {
-                          final jobId = node.key!.value as String;
-                          final jobData = _graphData[jobId]['job'];
-                          final job = Job.fromJson(jobData);
-                          
-                          final isSelected = jobId == widget.jobId;
-                          
-                          return Card(
-                            elevation: isSelected ? 8 : 2,
-                            color: _getColorForStatus(job.status),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: isSelected 
-                                  ? BorderSide(color: Colors.white, width: 2)
-                                  : BorderSide.none,
-                            ),
-                            child: Container(
-                              padding: EdgeInsets.all(16),
-                              constraints: BoxConstraints(
-                                minWidth: 150,
-                                maxWidth: 200,
+                  : Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Job Dependency Graph',
+                                style: TextStyle(
+                                  fontSize: 18, 
+                                  fontWeight: FontWeight.bold
+                                ),
                               ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Job ${job.jobId}',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                              SizedBox(height: 8),
+                              Text(
+                                'Showing ${_graphData.length} jobs. Drag to pan, pinch to zoom.',
+                                style: TextStyle(color: Colors.grey[700]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: InteractiveViewer(
+                            constrained: false,
+                            boundaryMargin: EdgeInsets.all(100),
+                            minScale: 0.1,
+                            maxScale: 2.0,
+                            child: Container(
+                              padding: EdgeInsets.all(50),
+                              child: GraphView(
+                                graph: graph,
+                                algorithm: BuchheimWalkerAlgorithm(
+                                  builder,
+                                  TreeEdgeRenderer(builder),
+                                ),
+                                paint: Paint()
+                                  ..color = Colors.black87
+                                  ..strokeWidth = 1.5
+                                  ..style = PaintingStyle.stroke,
+                                builder: (Node node) {
+                                  final jobId = node.key!.value as String;
+                                  final jobData = _graphData[jobId]['job'];
+                                  final job = Job.fromJson(jobData);
+                                  
+                                  final isSelected = jobId == widget.jobId;
+                                  
+                                  return Card(
+                                    elevation: isSelected ? 8 : 2,
+                                    color: _getColorForStatus(job.status),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      side: isSelected 
+                                          ? BorderSide(color: Colors.white, width: 2)
+                                          : BorderSide.none,
                                     ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    job.name,
-                                    style: TextStyle(color: Colors.white),
-                                    textAlign: TextAlign.center,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: 4),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black26,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      job.status,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500,
+                                    child: Container(
+                                      padding: EdgeInsets.all(12),
+                                      constraints: BoxConstraints(
+                                        minWidth: 150,
+                                        maxWidth: 180,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Job ${job.jobId}',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            job.name,
+                                            style: TextStyle(color: Colors.white),
+                                            textAlign: TextAlign.center,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          SizedBox(height: 4),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black26,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              job.status,
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
     );
   }

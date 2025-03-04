@@ -92,9 +92,14 @@ async def login(request_data: dict):
 
 @app.get("/jobs", response_model=JobResponse)
 async def get_jobs(session_id: str, time_range: str = "24h", test_mode: bool = False):
+    print(f"Received request with time_range={time_range}")
+    
     if test_mode:
         client = MockClient()
-        jobs = client.get_jobs() + client.get_completed_jobs(time_range)
+        active_jobs = client.get_jobs()
+        completed_jobs = client.get_completed_jobs(time_range)
+        print(f"Active jobs: {len(active_jobs)}, Completed jobs: {len(completed_jobs)}")
+        jobs = active_jobs + completed_jobs
     else:
         if session_id not in active_sessions:
             raise HTTPException(
@@ -122,9 +127,14 @@ async def get_jobs(session_id: str, time_range: str = "24h", test_mode: bool = F
 
 @app.get("/job_graph")
 async def get_job_graph(session_id: str, time_range: str = "24h", test_mode: bool = False):
+    print(f"Graph request with time_range={time_range}")
+    
     if test_mode:
         client = MockClient()
-        jobs = client.get_jobs() + client.get_completed_jobs(time_range)
+        active_jobs = client.get_jobs()
+        completed_jobs = client.get_completed_jobs(time_range)
+        jobs = active_jobs + completed_jobs
+        print(f"Graph: Found {len(jobs)} jobs ({len(active_jobs)} active, {len(completed_jobs)} completed)")
     else:
         if session_id not in active_sessions:
             raise HTTPException(
@@ -137,8 +147,11 @@ async def get_job_graph(session_id: str, time_range: str = "24h", test_mode: boo
     job_graph = {}
     for job in jobs:
         dependencies = client.get_job_dependencies(job.job_id)
-        job_graph[job.job_id] = {"job": job, "dependencies": dependencies}
+        # Only include dependencies that exist in our current job list
+        valid_deps = [dep for dep in dependencies if any(j.job_id == dep for j in jobs)]
+        job_graph[job.job_id] = {"job": job, "dependencies": valid_deps}
     
+    print(f"Returning job graph with {len(job_graph)} nodes")
     return job_graph
 
 @app.post("/logout")
