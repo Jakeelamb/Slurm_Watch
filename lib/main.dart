@@ -7,6 +7,7 @@ import 'providers/job_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/jobs_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/job_graph_screen.dart';
 import 'utils/macos_theme.dart';
 import 'providers/appearance_provider.dart';
 

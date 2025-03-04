@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/job.dart';
 import '../utils/macos_theme.dart';
+import '../screens/job_graph_screen.dart';
 
 class JobCard extends StatelessWidget {
   final Job job;
@@ -20,7 +21,14 @@ class JobCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => JobGraphScreen(jobId: job.jobId),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.all(16),

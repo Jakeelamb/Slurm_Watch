@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 import uuid
 import time
 from .slurm.client import SlurmClient, JobInfo, MockClient
@@ -36,6 +36,10 @@ class LoginResponse(BaseModel):
 class JobResponse(BaseModel):
     jobs: List[JobInfo]
     last_updated: str
+
+class JobNode(BaseModel):
+    job: JobInfo
+    dependencies: List[str]
 
 @app.post("/login")
 async def login(request_data: dict):
@@ -87,13 +91,11 @@ async def login(request_data: dict):
             )
 
 @app.get("/jobs", response_model=JobResponse)
-async def get_jobs(session_id: str, test_mode: bool = False):
+async def get_jobs(session_id: str, time_range: str = "24h", test_mode: bool = False):
     if test_mode:
-        # Use mock client for mock data
         client = MockClient()
-        jobs = client.get_jobs()
+        jobs = client.get_jobs() + client.get_completed_jobs(time_range)
     else:
-        # Validate session and get client
         if session_id not in active_sessions:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -103,9 +105,10 @@ async def get_jobs(session_id: str, test_mode: bool = False):
         session = active_sessions[session_id]
         client = session["client"]
         
-        # Get jobs
         try:
-            jobs = client.get_jobs()
+            active_jobs = client.get_jobs()
+            completed_jobs = client.get_completed_jobs(time_range)
+            jobs = active_jobs + completed_jobs
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -116,6 +119,27 @@ async def get_jobs(session_id: str, test_mode: bool = False):
         "jobs": jobs,
         "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+
+@app.get("/job_graph")
+async def get_job_graph(session_id: str, time_range: str = "24h", test_mode: bool = False):
+    if test_mode:
+        client = MockClient()
+        jobs = client.get_jobs() + client.get_completed_jobs(time_range)
+    else:
+        if session_id not in active_sessions:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid session"
+            )
+        client = active_sessions[session_id]["client"]
+        jobs = client.get_jobs() + client.get_completed_jobs(time_range)
+    
+    job_graph = {}
+    for job in jobs:
+        dependencies = client.get_job_dependencies(job.job_id)
+        job_graph[job.job_id] = {"job": job, "dependencies": dependencies}
+    
+    return job_graph
 
 @app.post("/logout")
 async def logout(session_id: str):

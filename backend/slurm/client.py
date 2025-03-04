@@ -2,7 +2,7 @@ import paramiko
 import re
 import random
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 import time
 
@@ -135,14 +135,81 @@ class SlurmClient:
             self.ssh_client.close()
             self.ssh_client = None
 
+    def get_job_dependencies(self, job_id: str) -> List[str]:
+        """Fetch job dependencies using scontrol."""
+        if not self.ssh_client:
+            if not self.connect():
+                raise Exception("Not connected to SSH server")
+        
+        cmd = f"scontrol show job {job_id}"
+        _, stdout, stderr = self.ssh_client.exec_command(cmd)
+        
+        error = stderr.read().decode('utf-8').strip()
+        if error:
+            print(f"Error running scontrol: {error}")
+            return []
+        
+        output = stdout.read().decode('utf-8')
+        dependencies = []
+        for line in output.split("\n"):
+            if line.strip().startswith("Dependency="):
+                dep_str = line.split("=")[1]
+                if dep_str and "afterok" in dep_str:
+                    # Extract job IDs, e.g., "afterok:12345"
+                    dep_type, dep_job_id = dep_str.split(":")
+                    if dep_type == "afterok":
+                        dependencies.append(dep_job_id)
+        return dependencies
+
+    def get_completed_jobs(self, time_range: str) -> List[JobInfo]:
+        """Fetch completed jobs using sacct for a given time range."""
+        if not self.ssh_client:
+            if not self.connect():
+                raise Exception("Not connected to SSH server")
+        
+        # Map time_range to sacct-compatible start time
+        time_map = {
+            "1h": "now-1hour",
+            "6h": "now-6hours",
+            "12h": "now-12hours",
+            "24h": "now-1day",
+            "156h": "now-6.5days"  # 156 hours ≈ 6.5 days
+        }
+        start_time = time_map.get(time_range, "now-1day")  # Default to 24h
+        
+        cmd = f"sacct -S {start_time} -E now -o JobID,JobName,State,Time,Nodes,CPUs,Memory --noheader"
+        _, stdout, stderr = self.ssh_client.exec_command(cmd)
+        
+        error = stderr.read().decode('utf-8').strip()
+        if error:
+            print(f"Error running sacct: {error}")
+            return []
+        
+        output = stdout.read().decode('utf-8')
+        jobs = []
+        for line in output.split("\n"):
+            if not line.strip():
+                continue
+            parts = line.split()
+            if len(parts) >= 7:
+                jobs.append(JobInfo(
+                    job_id=parts[0],
+                    name=parts[1],
+                    status=parts[2],
+                    time=parts[3],
+                    nodes=parts[4],
+                    cpus=parts[5],
+                    memory=parts[6]
+                ))
+        return jobs
+
 class MockClient:
     """A client that returns mock data for testing"""
     def __init__(self):
         pass
         
     def get_jobs(self) -> List[JobInfo]:
-        """Return mock job data"""
-        # Generate a few mock jobs with different statuses
+        """Return mock job data for active jobs"""
         return [
             JobInfo(
                 job_id="1001",
@@ -162,8 +229,13 @@ class MockClient:
                 cpus="4",
                 memory="8G"
             ),
+        ]
+    
+    def get_completed_jobs(self, time_range: str) -> List[JobInfo]:
+        """Return mock data for completed jobs"""
+        return [
             JobInfo(
-                job_id="1003",
+                job_id="1000",
                 name="test_job_completed",
                 status="COMPLETED",
                 time="0:45:00",
@@ -171,4 +243,23 @@ class MockClient:
                 cpus="2",
                 memory="4G"
             ),
-        ] 
+            JobInfo(
+                job_id="1003",
+                name="test_job_failed",
+                status="FAILED",
+                time="0:30:00",
+                nodes="1",
+                cpus="1",
+                memory="2G"
+            ),
+        ]
+    
+    def get_job_dependencies(self, job_id: str) -> List[str]:
+        """Return mock dependency data"""
+        dependencies = {
+            "1001": ["1000"],
+            "1002": ["1001"],
+            "1000": [],
+            "1003": ["1000"]
+        }
+        return dependencies.get(job_id, []) 

@@ -122,7 +122,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (isDesktop) _buildDesktopHeader(authProvider),
-                  
+                  _buildTimeRangeSelector(),
                   _buildStatusSummary(jobProvider),
                   
                   _buildFilterChips(),
@@ -664,6 +664,40 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
           ),
           Expanded(
             child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildTimeRangeSelector() {
+    final jobProvider = Provider.of<JobProvider>(context, listen: false);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: [
+          Text(
+            'Time Range:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<String>(
+            value: jobProvider.currentTimeRange,
+            items: [
+              DropdownMenuItem(value: "1h", child: Text("Last 1 Hour")),
+              DropdownMenuItem(value: "6h", child: Text("Last 6 Hours")),
+              DropdownMenuItem(value: "12h", child: Text("Last 12 Hours")),
+              DropdownMenuItem(value: "24h", child: Text("Last 24 Hours")),
+              DropdownMenuItem(value: "156h", child: Text("Last 156 Hours")),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                jobProvider.fetchJobs(timeRange: value);
+              }
+            },
           ),
         ],
       ),
