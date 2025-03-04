@@ -123,6 +123,7 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
                 children: [
                   if (isDesktop) _buildDesktopHeader(authProvider),
                   _buildTimeRangeSelector(),
+                  _buildLastUpdatedInfo(jobProvider),
                   _buildStatusSummary(jobProvider),
                   
                   _buildFilterChips(),

@@ -26,22 +26,30 @@ class _JobGraphScreenState extends State<JobGraphScreen> {
   Map<String, dynamic> _graphData = {};
   bool _isLoading = true;
   String? _error;
+  final TransformationController _transformationController = TransformationController();
 
   @override
   void initState() {
     super.initState();
-    builder
-      ..siblingSeparation = 100
-      ..levelSeparation = 150
+    builder = BuchheimWalkerConfiguration()
+      ..siblingSeparation = 150
+      ..levelSeparation = 200
       ..subtreeSeparation = 150
       ..orientation = BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM;
     _fetchGraphData();
+  }
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchGraphData() async {
     setState(() {
       _isLoading = true;
       _error = null;
+      _transformationController.value = Matrix4.identity();
     });
     
     try {
@@ -219,12 +227,13 @@ class _JobGraphScreenState extends State<JobGraphScreen> {
                         ),
                         Expanded(
                           child: InteractiveViewer(
+                            transformationController: _transformationController,
                             constrained: false,
                             boundaryMargin: EdgeInsets.all(100),
                             minScale: 0.1,
-                            maxScale: 2.0,
+                            maxScale: 4.0,
                             child: Container(
-                              padding: EdgeInsets.all(50),
+                              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 50),
                               child: GraphView(
                                 graph: graph,
                                 algorithm: BuchheimWalkerAlgorithm(
@@ -232,8 +241,8 @@ class _JobGraphScreenState extends State<JobGraphScreen> {
                                   TreeEdgeRenderer(builder),
                                 ),
                                 paint: Paint()
-                                  ..color = Colors.black87
-                                  ..strokeWidth = 1.5
+                                  ..color = Colors.black
+                                  ..strokeWidth = 1.0
                                   ..style = PaintingStyle.stroke,
                                 builder: (Node node) {
                                   final jobId = node.key!.value as String;
